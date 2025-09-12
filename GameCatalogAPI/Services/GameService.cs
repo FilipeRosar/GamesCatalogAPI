@@ -2,16 +2,19 @@
 using GameCatalogAPI.Models.InputModel;
 using GameCatalogAPI.Models.ViewModel;
 using GameCatalogAPI.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace GameCatalogAPI.Services
 {
     public class GameService : IGameService
     {
         private readonly IGameRepository _gameRepository;
+        private readonly Logger<GameService> _logger;
 
-        public GameService(IGameRepository gameRepository)
+        public GameService(IGameRepository gameRepository, ILogger<GameService> logger)
         {
             _gameRepository = gameRepository;
+            _logger = (Logger<GameService>?)logger;
         }
 
         public async Task<List<GameViewModel>> GetGames(int page, int qtd)
@@ -27,7 +30,7 @@ namespace GameCatalogAPI.Services
                 Price = game.Price
             }).ToList();
         }
-        public async Task<GameViewModel> GetById(Guid id)
+        public async Task<GameViewModel> GetGameById(Guid id)
         {
             var game = await _gameRepository.GetGameById(id);
 
@@ -50,7 +53,8 @@ namespace GameCatalogAPI.Services
 
             if (entityGame != null)
             {
-                throw new Exception();
+                _logger.LogWarning("Attempted to create duplicate game: {Name}, {Producer}", game.Name, game.Producer);
+                throw new ArgumentException($"Game '{game.Name}' by '{game.Producer}' already exists.");
             }
             var gamePost = new Game
             {
@@ -61,6 +65,8 @@ namespace GameCatalogAPI.Services
                 Price = game.Price
             };
             await _gameRepository.PostGame(gamePost);
+            _logger.LogInformation($"Created game: {0}, ID: {1}", gamePost.Name, gamePost.Id);
+
             return new GameViewModel
             {
                 Id = gamePost.Id,
@@ -71,5 +77,61 @@ namespace GameCatalogAPI.Services
             };
 
         }
+        public async Task UpdateGame(Guid id, GameInputModel game)
+        {
+            var entityGame = await _gameRepository.GetGameById(id);
+
+            if (entityGame == null)
+            {
+                _logger.LogWarning("Game with ID {Id} not found for update.", id);
+                throw new KeyNotFoundException($"Game with ID {id} not found.");
+            }
+
+            entityGame.Name = game.Name;
+            entityGame.Producer = game.Producer;
+            entityGame.Description = game.Description;
+            entityGame.Price = game.Price;
+
+            await _gameRepository.UpdateGame(entityGame);
+            _logger.LogInformation("Updated game ID {Id}: Name='{Name}', Producer='{Producer}', Price={Price}.",
+            id, game.Name, game.Producer, game.Price);
+
+
+        }
+        public async Task UpdateGame(Guid id, double price)
+        {
+            var entityGame = await _gameRepository.GetGameById(id);
+
+            if (entityGame == null)
+            {
+                _logger.LogWarning("Game with ID {Id} not found for price update.", id);
+                throw new KeyNotFoundException($"Game with ID {id} not found.");
+            }
+            entityGame.Price = price;
+
+            await _gameRepository.UpdateGame(entityGame);
+            _logger.LogInformation($"Updated price for game ID {id} to {price}.", id, price);
+
+
+        }
+        public async Task DeleteGame(Guid id)
+        {
+            var game = _gameRepository.GetGameById(id);
+
+            if (game == null)
+            {
+                _logger.LogWarning($"Attemted to delete non-existing game with ID: {id}", id);
+                throw new KeyNotFoundException($"Game with ID {id} not found");
+            }
+            await _gameRepository.DeleteGame(id);
+            _logger.LogInformation($"Removed {game.Id}");
+        }
+        public void Dispose()
+        {
+            _gameRepository?.Dispose();
+            _logger.LogInformation("GameService disposed.");
+        }
+
+        
     }
 }

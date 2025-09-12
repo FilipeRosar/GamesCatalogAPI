@@ -3,7 +3,7 @@ using GameCatalogAPI.Models.ViewModel;
 
 namespace GameCatalogAPI.Services
 {
-    public interface IGameService
+    public interface IGameService : IDisposable
     {
         Task<List<GameViewModel>> GetGames(int page, int qtd);
         Task<GameViewModel> GetGameById(Guid id);

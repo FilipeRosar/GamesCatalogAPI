@@ -1,4 +1,5 @@
-﻿using GameCatalogAPI.Models.InputModel;
+﻿using GameCatalogAPI.Exceptions;
+using GameCatalogAPI.Models.InputModel;
 using GameCatalogAPI.Models.ViewModel;
 using GameCatalogAPI.Services;
 using Microsoft.AspNetCore.Http;
@@ -33,6 +34,8 @@ namespace GameCatalogAPI.Controllers.V1
             return Ok(result);
         }
 
+        [ProducesResponseType(typeof(GameViewModel), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [HttpGet("{idGame:guid}")]
         public async Task<ActionResult<GameViewModel>> GetGameById([FromRoute] Guid idGame)
         {
@@ -54,7 +57,7 @@ namespace GameCatalogAPI.Controllers.V1
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to add game: {GameName}", gameInputModel.Name);
+                _logger.LogError(ex, "Failed to add game {0}", gameInputModel.Name);
                 return UnprocessableEntity("There is already a game with this name for this producer");
             }
         }
@@ -67,15 +70,15 @@ namespace GameCatalogAPI.Controllers.V1
                 await _gameService.UpdateGame(idGame, game);
                 return Ok();
             }
-            catch (Exception ex)
+            catch (GameNotRegisteredException ex)
             {
-                _logger.LogError(ex, "Failed to update game {idGame}", idGame);
+                _logger.LogError(ex, $"Failed to update game {idGame}", idGame);
                 return NotFound("Game not found.");
             }
         }
         
 
-        [HttpPatch("{idGame:guid}/price/{price:double.F2}")]
+        [HttpPatch("{idGame:guid}/price/{price:double}")]
         public async Task<ActionResult> UpdateGame([FromRoute]Guid idGame,[FromRoute] double price)
         {
             try
@@ -83,9 +86,9 @@ namespace GameCatalogAPI.Controllers.V1
                 await _gameService.UpdateGame(idGame, price);
                 return Ok();
             }
-            catch (Exception ex) 
+            catch (GameNotRegisteredException ex) 
             {
-                _logger.LogError(ex, "Failed to update price for game {idGame}", idGame);
+                _logger.LogError(ex, $"Failed to update price for game {idGame}", idGame);
                 return NotFound("Game not found.");
             }
         }
@@ -98,9 +101,9 @@ namespace GameCatalogAPI.Controllers.V1
                 await _gameService.DeleteGame(idGame);
                 return Ok();
             }
-            catch (Exception ex)
+            catch (GameNotRegisteredException ex)
             {
-                _logger.LogError(ex, "Failed to delete game {idGame}", idGame);
+                _logger.LogError(ex, $"Failed to delete game {idGame}", idGame);
                 return NotFound("Game not found.");
             }
         }

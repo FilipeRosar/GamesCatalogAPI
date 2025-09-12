@@ -10,7 +10,7 @@ namespace GameCatalogAPI.Models.InputModel
         public string Name { get; set; }
 
         [Required]
-        [StringLength(100, MinimumLength = 1, ErrorMessage = "The name of the producer must have between 3 and 100 character")]]
+        [StringLength(100, MinimumLength = 1, ErrorMessage = "The name of the producer must have between 3 and 100 character")]
         public string Producer { get; set; }
         [Required]
         [StringLength(350, ErrorMessage = "You are at the limit of the character")]
